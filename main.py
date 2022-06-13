@@ -7,8 +7,8 @@ import sqlite3, argparse
 
 #Program does not fulfill some of the requirements from the case
 #specifics being: unable to choose which database to use
-#this is primarily due to my inexperience databases within python,
-#not realizing that I needed to use an engine within someting like SQLAlchemy to be able to change the connection
+#this is primarily due to my inexperience with databases within python,
+#not realizing that I needed to use an engine via something like SQLAlchemy to be able to change the connection
 #It also does not perform statistical analysis
 
 db = sqlite3.connect("example.db")

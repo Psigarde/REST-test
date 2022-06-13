@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel
 from typing import List, Optional
 from enum import Enum
 

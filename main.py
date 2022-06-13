@@ -1,4 +1,3 @@
-from importlib_metadata import distribution
 import uvicorn
 from models import Sample
 from fastapi import FastAPI, HTTPException
@@ -10,7 +9,7 @@ import sqlite3, argparse
 #specifics being: unable to choose which database to use
 #this is primarily due to my inexperience databases within python,
 #not realizing that I needed to use an engine within someting like SQLAlchemy to be able to change the connection
-#It also does not perform statistical analysis, nor insert the 
+#It also does not perform statistical analysis
 
 db = sqlite3.connect("example.db")
 cur = db.cursor()

@@ -1,9 +1,16 @@
+from importlib_metadata import distribution
 import uvicorn
 from models import Sample
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse
 import sqlite3, argparse
+
+#Program does not fulfill some of the requirements from the case
+#specifics being: unable to choose which database to use
+#this is primarily due to my inexperience databases within python,
+#not realizing that I needed to use an engine within someting like SQLAlchemy to be able to change the connection
+#It also does not perform statistical analysis, nor insert the 
 
 db = sqlite3.connect("example.db")
 cur = db.cursor()
@@ -57,6 +64,9 @@ def checkIfIDExists(i:int):
     return r
 
 #processes SQL responses into suitable dictionary for further use
+#TODO add additional checks for adding the additional parameters to processed data,
+#TODO most likely by adding an additional input to function that gets checked to see if call is for basic processing
+#TODO or for the statistical calculation where additonal parameters are required
 def processSQLResult(SQLResponse):
     p = dict()
     for row in SQLResponse:
@@ -70,18 +80,21 @@ def processSQLResult(SQLResponse):
     return p
 
 #distribution specific methods to insert the additional required parameters into suitable tables
-#TODO SQLQuerys for inserting appropriate additonal parameters into distributiontype tables
 def insertWeibull(sample):
-    #db.commit()
-    pass
+    SQLQuery = "INSERT INTO `weibull` (`ID`, `shape`) VALUES ({id},{shape})".format(id = sample.id, shape = sample.shape)
+    performInsertQuery(SQLQuery)
 
 def insertUniform(sample):
-    #db.commit()
-    pass
+    SQLQuery = "INSERT INTO `uniform` (`ID`, `low`, `high`) VALUES ({id},{low},{high})".format(id = sample.id, low = sample.low, high = sample.high)
+    performInsertQuery(SQLQuery)
 
 def insertNormal(sample):
-    #db.commit()
-    pass
+    SQLQuery = "INSERT INTO `normal` (`ID`, `loc`, `scale`) VALUES ({id},{loc},{scale})".format(id = sample.id, loc = sample.loc, scale = sample.scale)
+    performInsertQuery(SQLQuery)
+
+def performInsertQuery(query):
+    cur.execute(query)
+    db.commit()
 
 #END OF FUNCTIONS
 
@@ -140,6 +153,7 @@ async def add_sample(sample: Sample):
             sample.id = cur.lastrowid
 
         #call a suitable follow-up insert function based on distribution type
+        #TODO verify sample data to ensure that the distribution specific parameters are valid
         if(sample.distributionType == "weibull"):
             insertWeibull(sample)
         if(sample.distributionType == "uniform"):
@@ -160,9 +174,10 @@ async def get_sample(sample_id):
         result = processSQLResult(checkIfIDExists(sample_id))
         if(result == {}):
             raise HTTPException(status_code=404, detail=f"The ID {sample_id} does not exist in the database")
-        return result
-
+        SQLQuery = "SELECT * FROM `samples` as s INNER JOIN `{distribution}` AS d ON s.id = d.id GROUP BY s.id".format(distribution = result[0]["distributionType"])
         #TODO do distribution calcs
+
+        return cur.execute(SQLQuery).fetchall()
 
 #END OF REST
 

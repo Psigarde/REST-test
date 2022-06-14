@@ -173,7 +173,7 @@ async def get_sample(sample_id):
         result = processSQLResult(checkIfIDExists(sample_id))
         if(result == {}):
             raise HTTPException(status_code=404, detail=f"The ID {sample_id} does not exist in the database")
-        SQLQuery = "SELECT * FROM `samples` as s INNER JOIN `{distribution}` AS d ON s.id = d.id GROUP BY s.id".format(distribution = result[0]["distributionType"])
+        SQLQuery = "SELECT * FROM `samples` as s INNER JOIN `{distribution}` AS d ON s.id = d.id WHERE s.id = {id} GROUP BY s.id".format(distribution = result[int(sample_id)]["distributionType"], id = int(sample_id))
         #TODO do distribution calcs
 
         return cur.execute(SQLQuery).fetchall()

@@ -92,7 +92,10 @@ def insertNormal(sample):
     performInsertQuery(SQLQuery)
 
 def performInsertQuery(query):
-    cur.execute(query)
+    try:
+        cur.execute(query)
+    except:
+        raise HTTPException(status_code = 400, detail= "there was an error caused due to one or more of the additional parameters for the chosen distributiontype being incorrect in input data")
     db.commit()
 
 #END OF FUNCTIONS

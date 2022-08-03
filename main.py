@@ -12,12 +12,12 @@ import sqlite3, argparse
 #It also does not perform statistical analysis
 
 db = sqlite3.connect("example.db")
-cur = db.cursor()
 
 app = FastAPI()
 
 #START OF FUNCTIONS
 def initializeDB():
+        cur = db.cursor()
         #initializes DB, drops table if it exists prior to initialization
         #does not drop tables uniform/normal/weibull, as entries from those
         #are automatically deleted when the foreign key is deleted via dropping samples
@@ -56,6 +56,7 @@ def initializeDB():
 #this function checks if the ID exists in the database, and raises an http error if it does not
 def checkIfIDExists(i:int):
     try:
+        cur = db.cursor()
         sqlQuery = f"SELECT * FROM `samples` AS s WHERE s.ID = {i}"
         r = cur.execute(sqlQuery).fetchall()
     except:
@@ -93,6 +94,7 @@ def insertNormal(sample):
 
 def performInsertQuery(query):
     try:
+        cur = db.cursor()
         cur.execute(query)
     except:
         raise HTTPException(status_code = 400, detail= "there was an error caused due to one or more of the additional parameters for the chosen distributiontype being incorrect in input data")
@@ -119,30 +121,32 @@ async def validation_exception_handler(request, exc):
 
 @app.get("/api/samples")
 async def get_samples():
+    cur = db.cursor()
     #check if db is somehow not connected
-    if(db == None):
+    if cur is None:
         raise HTTPException(status_code=404, detail="the db has not been connected")
     else:
         #select all rows from sample database, process data into a dictionary and return the processed dictionary
         SQLResponse = cur.execute("SELECT * FROM `samples`").fetchall()
-        if(SQLResponse == []):
+        if SQLResponse == []:
             raise HTTPException(status_code=404, detail="the db currently has no data")
         processedList = processSQLResult(SQLResponse)
         return processedList
 
 @app.post("/api/sample")
 async def add_sample(sample: Sample):
-    if(db == None):
+    cur = db.cursor()
+    if cur is None:
         raise HTTPException(status_code=404, detail="the db has not been connected")
     else:
         #check if samplecount is set and correct, otherwise set it as amount of values
-        if(sample.sampleCount != len(sample.values)):
+        if sample.sampleCount != len(sample.values):
             sample.sampleCount = len(sample.values)
-        if(sample.sampleCount <= 0):
+        if sample.sampleCount <= 0:
             raise HTTPException(status_code=400, detail=f"The sample {sample} has no values in the value list")
 
         #check if request has a sample ID defined, if not, do query that uses database generated id
-        if(sample.id != None):
+        if sample.id is not None:
             #check if ID exists in database if defined in request
             if(processSQLResult(checkIfIDExists(sample.id)) != {}):
                 raise HTTPException(status_code=400, detail=f"the sample with id: {sample.id} already exists in the database")
@@ -156,11 +160,11 @@ async def add_sample(sample: Sample):
 
         #call a suitable follow-up insert function based on distribution type
         #TODO verify sample data to ensure that the distribution specific parameters are valid
-        if(sample.distributionType == "weibull"):
+        if sample.distributionType == "weibull":
             insertWeibull(sample)
-        if(sample.distributionType == "uniform"):
+        if sample.distributionType == "uniform":
             insertUniform(sample)
-        if(sample.distributionType == "normal"):
+        if sample.distributionType == "normal":
             insertNormal(sample)
         #commit changes to DB as it has now finished inserting
         db.commit()
@@ -168,13 +172,14 @@ async def add_sample(sample: Sample):
 
 @app.get("/api/sample/{sample_id}/statistics")
 async def get_sample(sample_id):
-    if(db == None):
+    cur = db.cursor()
+    if cur is None:
         raise HTTPException(status_code=404, detail="the db has not been connected")
     else:
         #check if sample exists and raise error if it doesn't.
         #process the sample to be able to perform calculations
         result = processSQLResult(checkIfIDExists(sample_id))
-        if(result == {}):
+        if result == {}:
             raise HTTPException(status_code=404, detail=f"The ID {sample_id} does not exist in the database")
         SQLQuery = "SELECT * FROM `samples` as s INNER JOIN `{distribution}` AS d ON s.id = d.id WHERE s.id = {id} GROUP BY s.id".format(distribution = result[int(sample_id)]["distributionType"], id = int(sample_id))
         #TODO do distribution calcs
@@ -185,7 +190,7 @@ async def get_sample(sample_id):
 
 #start of program, starts uvicorn server
 def main(flag):
-    if(flag):
+    if flag:
         initializeDB()
     uvicorn.run("main:app", reload = True)
 
@@ -199,6 +204,6 @@ if __name__ == '__main__':
     parser.add_argument("--reset", help = "!!type 'py .\main.py --reset true' to reset the entire database to initial values!!")
 
     args = parser.parse_args()
-    if(args.reset == "true"):
+    if args.reset == "true":
         f = True
     main(f)
